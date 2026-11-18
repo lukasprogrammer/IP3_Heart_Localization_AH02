@@ -86,6 +86,6 @@ ax[3,1].set_xlim(0, 500)
 ax[3,1].grid()
 
 
-plt.subplots_adjust(hspace=0.7, wspace=0.3)
+plt.subplots_adjust(hspace=0.9, wspace=0.4)
 # plt.tight_layout()
 plt.show()
