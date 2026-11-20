@@ -1,3 +1,6 @@
-M = Fs/4000
+def downsampling(Fs, av, mv, pv, tv):
 
-x_new = x[::M]
+
+    M = Fs/4000
+
+    x_new = x[::M]
