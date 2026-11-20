@@ -1,3 +1,13 @@
 {
-    "python-envs.defaultEnvManager": "ms-python.python:system"
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "background.windowBackgrounds": [],
+    "background.editorBackgrounds": [
+        "c:/Users/natch/OneDrive/Afbeeldingen/background/illustration-anime-city \\(1\\).jpg"
+    ],
+    "background.backgroundOpacity": [
+        0.1,
+        0.15,
+        0.1,
+        0.1
+    ]
 }
