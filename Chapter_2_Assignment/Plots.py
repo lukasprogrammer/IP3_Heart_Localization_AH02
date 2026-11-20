@@ -29,7 +29,7 @@ ax[0, 0].grid()
 ax[0,1].plot(f_axis_av, np.abs(F_av))
 ax[0,1].set_title("AV_Frequency")
 ax[0,1].set_xlabel("Frequency [Hz]")
-ax[0,1].set_xlim(0, 500)
+ax[0,1].set_xlim(0, 2000)
 ax[0,1].set_ylabel("Amplitude")
 ax[0,1].grid()
 
