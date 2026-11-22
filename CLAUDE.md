@@ -62,6 +62,12 @@
 - Results verified: MBF peaks are biased to 1.5° / 13.5° and nearly merged (resolution ≈ 180°/M ≈ 25°); MVDR peaks sit exactly at 0° / 15°. Assignment 3: |wᴴa(θ0)| = 1, |wᴴa(θ1)| = 0.0015 → MVDR nulls the other source.
 - Single-source check: P_mbf(0°) = M² = 49 ✔.
 - Python note: the interpreter with numpy/scipy/matplotlib on this PC is `py` (3.15, `C:\Users\natch\AppData\Local\Python\pythoncore-3.15-64`), not the msys `python` on PATH.
+- User's own 6.4 version in `Chapter_2_Assignment/theta` — **fixed by Claude on request (2026-11-22), runs correctly** (P(0°) = 49, MBF peaks 1.5°/13.5°, MVDR peaks 0°/15°). Fixes made:
+  1. `a_lin`: user had `np.sin(th)[None, :]` → IndexError for a scalar (0-d array). Now `np.atleast_1d(theta)` → always (M, Q), then `[:, 0]` back to (M,) for scalar input. Uses `F0` not global `F`.
+  2. `give_Rx(theta0, ...)` instead of all 721 scan angles.
+  3. `matchedbeamformer`: `aᴴ Rx a` (user had `aᴴ A0 * Rx`), local `Pmbf`, `np.real`.
+  4. Added `mvdr`, second subplot and `plt.show()`; removed unused imports and `.item()`.
+- File still has no `.py` extension (open issue 1 above).
 - Still open from 6.2: Δ loop for Fig. 6.4, 6.2.9 calculations, fix issues 1–4 in `Chapter_2_Assignment/theta`. Next after that: 6.5/6.6 (STFT `narrowband_Rx`, wideband averaging, experiments).
 
 ## Reference
