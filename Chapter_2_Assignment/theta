@@ -11,6 +11,7 @@ import math
 v = 343; # m/s
 F = 500 # Hz
 M = 7
+SNR = 10
 
 lam = v/F
 delta = 0.5; 
@@ -24,68 +25,74 @@ def a_lin(theta, M, d, v, F0):
     tau = (d / v) * np.sin(th) 
     m = np.arange(M)
 
-    Am =  np.exp(-1j*2 *np.pi *F0  * m * tau)
+    Am =  np.exp(-1j*2 *np.pi *F * m * tau)
     return Am
 
-a0 = a_lin(0, M, d, v, F)
 
+A0 = a_lin(0, M, d, v, F)
 P = np.zeros(len(theta))
-Pmbf = np.zeros(len(theta))
 
 
-for i, angle in enumerate(theta):
-    a = a_lin(angle,M, d, v, F)
-    P[i] = np.abs(a.conj().T @ a0).item() ** 2
-    Pmbf[i] = a.conj().T @ Rx @a0
+def spatial_spectrum(P,A0,theta, M, d, v, F0):
+    for i, angle in enumerate(theta):
+        A = a_lin(angle,M, d, v, F)
+        P[i] = np.abs(A.conj().T @ A0).item() ** 2
+
+    return P
 
 
 plt.plot(theta, P)
-plt.xlabel("angle [deg]")
-plt.ylabel("spatial spectrum")
-plt.show()
+#plt.xlabel("angle [deg]")
+#plt.ylabel("spatial spectrum")
+#plt.show()
 
+#        --part 2 two sources --
 
-SNR=10
 theta0 = np.deg2rad([0,15])
 
-def give_Rx(theta, M, d, v, F)
+def give_Rx(SNR, theta0, M, d, v, F):
     
-    A =a_lin(theta, M, d, v, F)
+    sigma_n = 10**(-SNR/20)
+    
+    A = a_lin(theta0, M, d, v, F)
     A_H = A.conj().T
     R = A @ A_H                            
-    Rn = np.eye(M,M)*sigma_n**2;  
-          
+    Rn = np.eye(M,M)*sigma_n**2 
     Rx = R + Rn  
+
+    return Rx
     
+Pmbf = np.zeros(len(theta))
 
-
-
-def matchedbeamformer(Rx,theta, M, d, v, F0)
-
-    
-    
+def matchedbeamformer(Rx,theta, M, d, v, F0):
 
     for i, angle in enumerate(theta):
         a = a_lin(angle, M, d, v, F)
-        Pmbf[i] = a.conj().T @ Rx @a0
+        Pmbf[i] = (a.conj().T @ A0 * Rx)
+
+    return Pmbf
 
     
+Rxx = give_Rx(theta, M, d, v, F)
+P_mbf  = matchedbeamformer(Rxx,theta, M, d, v, F)
 
-P_mbf  = matchedbeamformer(Rx, th_range, M, d, v, F0)
+plt.figure(figsize=(11, 4))
+plt.subplot(1, 2, 1)
+plt.plot(np.rad2deg(theta), P_mbf)
+plt.title("(a) matched beamformer")
+plt.xlabel("angle [deg]")
+plt.ylabel("spatial spectrum")
+plt.grid()
 
-Pmbf = 
 
 
+#P_mvdr = mvdr(Rx, th_range, M, d, v, F0)
 
 
-
-
-
-P_mvdr = mvdr(Rx, th_range, M, d, v, F0)
-
-sigma_n = 10**(-SNR/20);                # std of the noise (SNR in dB)
-A = a_lin(theta0, M, d, v, F);          # source direction vectors
-A_H = A.conj().T                        # hermitian transpose
-R = A @ A_H                             # assume equal powered sources
-Rn = np.eye(M,M)*sigma_n**2;            # noise covariance (scaled identity matrix)
-Rx = R + Rn                             # received data covariance matrix
+#SNR=10
+#sigma_n = 10**(-SNR/20);                # std of the noise (SNR in dB)
+#A = a_lin(theta0, M, d, v, F);          # source direction vectors
+#A_H = A.conj().T                        # hermitian transpose
+#R = A @ A_H                             # assume equal powered sources
+#Rn = np.eye(M,M)*sigma_n**2;            # noise covariance (scaled identity matrix)
+#Rx = R + Rn                             # received data covariance matrix
