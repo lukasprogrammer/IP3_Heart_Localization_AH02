@@ -231,7 +231,7 @@ def Segmentation(Signal, Fs):
     return S1_recording, S2_recording
 
 
-Data, Fs = librosa.load("Module_1/TestRecording.mp3", sr=None, mono=False)
+Data, Fs = librosa.load("Module_1/Recordings/TestRecording.mp3", sr=None, mono=False)
 
 if Data.ndim == 2:
     Data = Data.T
