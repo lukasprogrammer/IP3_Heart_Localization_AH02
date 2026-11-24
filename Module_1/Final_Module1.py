@@ -18,6 +18,8 @@ import math
 import librosa
 
 
+
+# Extracts the segments out of the original signal for concatiatinating
 def Extract_Segments(Signal, boundaries, Fs):
     segments = []
 
@@ -32,7 +34,7 @@ def Extract_Segments(Signal, boundaries, Fs):
 
     return segments
 
-
+# Finds the boundaries of the peaks of S1 and S2, for extracting 
 def Find_Boundaries(see, peaks, threshold=0.2, max_duration=0.2):
     boundaries = []
     Fs_see = 4000
@@ -52,6 +54,9 @@ def Find_Boundaries(see, peaks, threshold=0.2, max_duration=0.2):
         boundaries.append((start,end))
 
     return boundaries
+
+
+# Removing The unreliable pairs of S1 and S2 detected in Segmentation()
 def Remove_Unreliable_Pairs(S1, S2, unreliable, Fs_see=4000):
 
     margin = int(0.05 * Fs_see) 
@@ -73,6 +78,11 @@ def Remove_Unreliable_Pairs(S1, S2, unreliable, Fs_see=4000):
 
 
     return np.array(S1_clean, dtype=int), np.array(S2_clean, dtype=int)
+
+
+# Determining the best quality channel to perform peak analysis on, using quality ratio which consists
+# Of the median of the peak_strengths divided by the median of the background noise
+# In Segmentation() the channel with the highest quality gets selected and used for analisys
 
 def Channel_Quality(data, Fs):
     b, a = signal.butter(2, [10, 800], btype='bandpass', fs=Fs)
