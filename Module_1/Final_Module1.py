@@ -85,42 +85,62 @@ def Remove_Unreliable_Pairs(S1, S2, unreliable, Fs_see=4000):
 # In Segmentation() the channel with the highest quality gets selected and used for analisys
 
 def Channel_Quality(data, Fs):
-    b, a = signal.butter(2, [10, 800], btype='bandpass', fs=Fs)
+
+    # Bandpass filtering
+    b, a = signal.butter(2, [10, 800], 
+                         btype='bandpass', fs=Fs)
     filtered = signal.filtfilt(b, a, data.astype(float))
 
+    # Downsampling to 4000 Hz
     g = math.gcd(Fs, 4000)
 
-    filtered_ds = signal.resample_poly(filtered,
+    filtered_ds = signal.resample_poly(
+        filtered,
         4000 // g,
         Fs // g
     )
 
     Fs = 4000
 
+    # Normalize for Shannon energy
     scale = np.percentile(np.abs(filtered_ds), 99)
 
-    nor_filtered_ds = filtered_ds / (scale + 1e-12)
-    nor_filtered_ds = np.clip(nor_filtered_ds, -1, 1)
-    x2 = np.square(nor_filtered_ds)
-    sh_energy = -(x2)*np.log10(np.maximum(x2, 1e-12))
+    nor_filtered_ds = 0.6 * filtered_ds / (scale + 1e-12)
 
-    d, c = signal.butter(2, 15, btype='lowpass', fs=4000)
+    nor_filtered_ds = np.clip(nor_filtered_ds, -0.6, 0.6)
+
+    # Shannon energy
+    x2 = np.square(nor_filtered_ds)
+    sh_energy = -x2 * np.log10(np.maximum(x2, 1e-12))
+
+    # Shannon energy envelope
+    d, c = signal.butter(2, 15, btype='lowpass', fs=Fs)
     see = signal.filtfilt(d, c, sh_energy)
     see = np.maximum(see, 0)
 
-    see = see/(np.max(see)+ 1e-12)
+    see = see / (np.max(see) + 1e-12)
 
-    peaks, properties = signal.find_peaks(see, height=0.4,distance=int(0.1*Fs), prominence=0.2)
-    if len(peaks) < 2:
+    # Peak detection
+    peaks, properties = signal.find_peaks(
+        see,
+        height=0.1,
+        distance=int(0.15 * Fs),
+        prominence=0.05
+    )
+
+    if len(peaks) < 3:
         return 0, see, peaks
 
     peak_strength = np.median(properties["prominences"])
 
+    # Background noise estimation
     mask = np.ones(len(see), dtype=bool)
+
     for p in peaks:
-        start = max(0, p - int(0.1*Fs))
-        end = min(len(see), p + int(0.1*Fs))
+        start = max(0, p - int(0.1 * Fs))
+        end = min(len(see), p + int(0.1 * Fs))
         mask[start:end] = False
+
     if not np.any(mask):
         return 0, see, peaks
 
@@ -133,80 +153,123 @@ def Channel_Quality(data, Fs):
 
 def Segmentation(Signal, Fs):
 
-    # We start off with a quality check of the best channel to use for detection
-    n_channels = Signal.shape[1]
-    qualities = []
-    all_see= []
-    all_peaks =[]
+    # Support mono and multichannel signals
+    if Signal.ndim == 1:
+        Signal = Signal[:, np.newaxis]
 
+    n_channels = Signal.shape[1]
+
+    qualities = []
+    all_see = []
+    all_peaks = []
+
+    Fs_see = 4000
+
+    # Determine best channel
     for ch in range(n_channels):
-        quality, see, peaks = Channel_Quality(Signal[:,ch], Fs)
+
+        quality, see, peaks = Channel_Quality(
+            Signal[:, ch], Fs
+        )
+
         qualities.append(quality)
         all_see.append(see)
         all_peaks.append(peaks)
 
         print(f"Channel {ch+1}: quality = {quality:.2f}")
+        print(f"Detected peaks: {len(peaks)}")
 
     best_channel = np.argmax(qualities)
 
     print(f"\nBest channel: {best_channel+1}")
 
-
     see = all_see[best_channel]
     peaks = all_peaks[best_channel]
 
+    # Calculate intervals
+    intervals = np.diff(peaks) / Fs_see
 
-    # This part detect peaks s1 and s2 very roughly, prone to errors
-    Fs_see = 4000
+    print("Peak times:", peaks / Fs_see)
+    print("Intervals:", intervals)
 
+    # Plot detected peaks for debugging
+    t_see = np.arange(len(see)) / Fs_see
+
+    plt.figure(figsize=(15, 4))
+    plt.plot(t_see, see)
+    plt.plot(t_see[peaks], see[peaks], "rx")
+    plt.xlabel("Time [s]")
+    plt.title("Shannon energy envelope")
+    plt.grid()
+    plt.show()
+
+    # Check sufficient number of peaks
+    if len(peaks) < 3:
+        raise ValueError(
+            "Too few peaks detected to estimate heartbeat intervals"
+        )
+
+    # Estimate systole and diastole
+    threshold = (
+        np.percentile(intervals, 25) +
+        np.percentile(intervals, 75)
+    ) / 2
+
+    short = intervals[intervals < threshold]
+    long = intervals[intervals >= threshold]
+
+    if len(short) == 0 or len(long) == 0:
+        raise ValueError(
+            "Cannot distinguish systole and diastole"
+        )
+
+    S = np.median(short)
+    D = np.median(long)
+    T = S + D
+
+    print(f"Systole: {S:.3f} s")
+    print(f"Diastole: {D:.3f} s")
+    print(f"Heartbeat period: {T:.3f} s")
+    print(f"Heart rate: {60/T:.1f} BPM")
+
+    # Classify S1 and S2
     S1 = []
     S2 = []
 
+    tolerance = 0.25
     i = 0
 
-    while i < len(peaks) - 2:
+    while i < len(peaks) - 1:
 
-        interval1 = peaks[i+1] - peaks[i]
-        interval2 = peaks[i+2] - peaks[i+1]
+        dt = (peaks[i+1] - peaks[i]) / Fs_see
 
-        if interval1 < interval2:
+        if abs(dt - S) < tolerance * S:
+
             S1.append(peaks[i])
             S2.append(peaks[i+1])
+
             i += 2
+
         else:
             i += 1
 
     S1 = np.array(S1, dtype=int)
     S2 = np.array(S2, dtype=int)
 
-    intervals = np.diff(peaks)/Fs_see
-
-    S = np.median(intervals[intervals < np.median(intervals)])
-    D = np.median(intervals[intervals >= np.median(intervals)])
-
-    T = S + D
-
-    print(f"Systole: {S:.3f} s")
-    print(f"Diastole: {D:.3f} s")
-    print(f"Heartbeat period: {T:.3f} s")
-
-
-    #flagging suspicious intervals
-
-
-    tolerance =0.25
+    # Flag suspicious intervals
     unreliable = []
 
     for i in range(len(peaks) - 1):
-        dt = (peaks[i+1] - peaks[i])/Fs_see
 
-        valid_s = np.abs(dt - S) < tolerance * S
-        valid_d = np.abs(dt - D) < tolerance * D
+        dt = (peaks[i+1] - peaks[i]) / Fs_see
 
-        if not(valid_d or valid_s):
+        valid_s = abs(dt - S) < tolerance * S
+        valid_d = abs(dt - D) < tolerance * D
+
+        if not (valid_s or valid_d):
             unreliable.append((peaks[i], peaks[i+1]))
 
-
+    # Remove unreliable pairs
     S1_clean, S2_clean = Remove_Unreliable_Pairs(
         S1, S2, unreliable
     )
@@ -214,14 +277,24 @@ def Segmentation(Signal, Fs):
     print("Reliable S1:", len(S1_clean))
     print("Reliable S2:", len(S2_clean))
 
-
+    # Find boundaries
     S1_boundaries = Find_Boundaries(see, S1_clean)
     S2_boundaries = Find_Boundaries(see, S2_clean)
 
-    S1_segments = Extract_Segments(Signal, S1_boundaries, Fs)
-    S2_segments = Extract_Segments(Signal, S2_boundaries, Fs)
+    # Extract original signal segments
+    S1_segments = Extract_Segments(
+        Signal, S1_boundaries, Fs
+    )
 
+    S2_segments = Extract_Segments(
+        Signal, S2_boundaries, Fs
+    )
 
+    # Check before concatenating
+    if len(S1_segments) == 0 or len(S2_segments) == 0:
+        raise ValueError("No reliable S1/S2 segments found")
+
+    # Concatenate segments
     S1_recording = np.concatenate(S1_segments, axis=0)
     S2_recording = np.concatenate(S2_segments, axis=0)
 
@@ -231,13 +304,33 @@ def Segmentation(Signal, Fs):
     return S1_recording, S2_recording
 
 
-Data, Fs = librosa.load("Module_1/Recordings/TestRecording.mp3", sr=None, mono=False)
+# Fs, Data = wavfile.read("Module_1/Recordings/Model_Heart.wav")
 
-if Data.ndim == 2:
+# # Convert to floating point
+# Data = Data.astype(float)
+
+# # Normalize
+# Data = Data / (np.max(np.abs(Data)) + 1e-12)
+
+# # Ensure shape is (samples, channels)
+# if Data.ndim == 1:
+#     Data = Data[:, np.newaxis]
+
+
+Data, Fs = librosa.load(
+    "Module_1/Recordings/TestRecording.mp3",
+    sr=None,
+    mono=False
+)
+
+# Ensure shape is (samples, channels)
+if Data.ndim == 1:
+    Data = Data[:, np.newaxis]
+else:
     Data = Data.T
 
-left = Data[:, 0]
-right = Data[:, 1]
+# Normalize
+Data = Data / (np.max(np.abs(Data)) + 1e-12)
 
 S1_recording, S2_recording = Segmentation(Data, Fs)
 

@@ -106,8 +106,12 @@ S = np.pad(S, (0, N_cycle - len(S)))
 HeartSignal = signal.fftconvolve(impulses, S)
 
 HeartSignal = HeartSignal[:len(impulses)]
+# zeros = np.zeros(len(HeartSignal))
 
+# result = np.vstack((HeartSignal, zeros)).T
 scaled = np.int16(HeartSignal / np.max(np.abs(HeartSignal)) * 32767)
+
+
 scipy.io.wavfile.write('Module_1/Recordings/Model_Heart.wav', Fs, scaled)
 
 HeartSignalfilt = Bandpass_Filter(HeartSignal, Fs)
