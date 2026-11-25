@@ -1,24 +1,32 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.io.wavfile import write
+import scipy.io.wavfile as sci
 
 Fs = 48000
 N = Fs * 10
 
 uwn = np.random.uniform(-1, 1, N)
+uwn1 = np.zeros(N)
+
 scaleduwn = np.int16(uwn / np.max(np.abs(uwn)) * 32767)
-write('Module_1/Recordings/Uwn.wav', Fs, scaleduwn)
+scaleduwn1 = np.int16(uwn1 / np.max(np.abs(uwn1)) * 32767)
 
-gwn = np.random.normal(0, 1, N)
-scaledgwn = np.int16(gwn / np.max(np.abs(gwn)) * 32767)
-write('Module_1/Recordings/Gwn.wav', Fs, scaledgwn)
+result = np.vstack((scaleduwn, scaleduwn1)).T
+sci.write('Module_1/Recordings/UwnMono.wav', Fs, result)
+samplerate, data = sci.read('Module_1/Recordings/UwnMono.wav')
 
-plt.figure(figsize=(12, 6))
+print(data.shape)
 
-plt.subplot(2, 1, 1)
-plt.plot(gwn)
-plt.title('White Noise (Uniformly Distributed)')
-plt.xlabel('Sample')
-plt.ylabel('Amplitude')
+# gwn = np.random.normal(0, 1, N)
+# scaledgwn = np.int16(gwn / np.max(np.abs(gwn)) * 32767)
+# sci.write('Module_1/Recordings/Gwn2.wav', Fs, scaledgwn)
 
-plt.show()
+# plt.figure(figsize=(12, 6))
+
+# plt.subplot(2, 1, 1)
+# plt.plot(gwn)
+# plt.title('White Noise (Uniformly Distributed)')
+# plt.xlabel('Sample')
+# plt.ylabel('Amplitude')
+
+# plt.show()
