@@ -6,23 +6,24 @@ from scipy.signal import find_peaks
 from scipy.fft import fft, rfftfreq, rfft
 from scipy.io import wavfile
 import math
-
+from scipy.signal import ShortTimeFFT
 
 
 
 
 v = 343; # m/s
 F0 = 500 # Hz
-M = 7 
+M = 6 
 snr = 10 
 Q = 2 # how many sources we have
 lam = v/F0
 delta = 0.5; 
-d = lam * delta; # m
+#d = lam * delta; # m
 
-Nw = 44444444 # amount of samples
-k = 1
-Fk =  (k * F0)/Nw
+d = 0.10
+Nw = 2048
+
+theta = np.deg2rad(np.linspace(-90, 90, 721))
 
 
 def alin(theta, M, d, v, F0):
@@ -46,7 +47,7 @@ def spatialSpectrum(P, A0, theta, M, d, v, F0):
 
     return P
 
-theta = np.deg2rad(np.linspace(-90, 90, 721))
+
 A0 = alin(0, M, d, v, F0)
 P = np.zeros(len(theta))
 Spectrum = spatialSpectrum(P, A0, theta, M, d, v, F0)
@@ -57,6 +58,7 @@ Spectrum = spatialSpectrum(P, A0, theta, M, d, v, F0)
 #plt.show()
 
 #        --part 2 two sources --
+
 def giveRx(SNR, theta0, M, d, v, F0):
     
     sigma_n = 10**(-SNR/20)
@@ -102,19 +104,19 @@ Rxx = giveRx(snr, theta0, M, d, v, F0)
 # calculating pmbf
 
 pmbf = np.zeros(len(theta))
-Pmbf  = matchedBeamFormer(pmbf, Rxx, theta, M, d, v, F0)
-
-# finding argument theta
-
-sourcePointsMbf = sourceDirection(Pmbf, theta, Q)
-thetaDirMbf = np.sort(np.rad2deg(theta[sourcePointsMbf]))
-print( thetaDirMbf)
-
+#Pmbf  = matchedBeamFormer(pmbf, Rxx, theta, M, d, v, F0)
 
 # calculating pmvdr
 
 pmvdr = np.zeros(len(theta))
-Pmvdr = MVDR(pmvdr, Rxx, theta, M, d, v, F0)
+#Pmvdr = MVDR(pmvdr, Rxx, theta, M, d, v, F0)
+
+# finding argument theta
+
+'''
+sourcePointsMbf = sourceDirection(Pmbf, theta, Q)
+thetaDirMbf = np.sort(np.rad2deg(theta[sourcePointsMbf]))
+print( thetaDirMbf)
 
 # finding argument theta
 
@@ -125,6 +127,7 @@ print( thetaDirMvdr)
 plt.figure(figsize=(14, 4))
 
 # bmf plot
+
 plt.subplot(1, 2, 1)
 plt.plot(np.rad2deg(theta), Pmbf)
 plt.title("(a) matched beamformer")
@@ -142,10 +145,112 @@ plt.grid()
 
 plt.tight_layout()
 plt.show()
+'''
+
+files = [
+    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_1.wav",
+    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_2.wav",
+    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_3.wav",
+    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_4.wav",
+    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_5.wav",
+    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_6.wav",
+]
+
+X = []
+for f in files:
+    Fs, x = wavfile.read(f)
+    X.append(x)
+X = np.array(X, dtype=float)
+
+def narrowband_Rx(X, Fs, nperseg):
+
+    SFT = ShortTimeFFT.from_window('hann', Fs, nperseg, noverlap=nperseg//2)
+    Sx_all = SFT.stft(X)
+    f_bins = SFT.f 
+    M = Sx_all.shape[0]
+    K = Sx_all.shape[1]                 
+    L = Sx_all.shape[2]
+      
+    print(Sx_all.shape)  
+    print(M,K,L)     
+    
+            
+    Rx_all = np.zeros((K, M, M), dtype=complex)
+    for k in range(K):
+        Xk = Sx_all[:,k,:]    
+        Rx_all[k] = Xk @ Xk.conj().T/L
+
+    return f_bins, Rx_all
+
+f_bins, Rx_all = narrowband_Rx(X, Fs, Nw)
+
+k = np.argmin(np.abs(f_bins - 2000))
+Fk = f_bins[k]
 
 
+Pmbf  = matchedBeamFormer(pmbf, Rx_all[k], theta, M, d, v, Fk)
+Pmvdr = MVDR(pmvdr, Rx_all[k], theta, M, d, v, Fk)
+
+print("bin", round(Fk), "Hz -> mbf:", np.rad2deg(theta[np.argmax(Pmbf)]),
+      " mvdr:", np.rad2deg(theta[np.argmax(Pmvdr)]))
+
+plt.figure(figsize=(14, 4))
+plt.subplot(1, 2, 1)
+plt.plot(np.rad2deg(theta), Pmbf)
+plt.title("matched beamformer, " + str(round(Fk)) + " Hz")
+plt.xlabel("angle [deg]")
+plt.ylabel("spatial spectrum")
+plt.grid()
+
+plt.subplot(1, 2, 2)
+plt.plot(np.rad2deg(theta), Pmvdr)
+plt.title("mvdr, " + str(round(Fk)) + " Hz")
+plt.xlabel("angle [deg]")
+plt.ylabel("spatial spectrum")
+plt.grid()
+plt.tight_layout()
+plt.show()
 
 
+def bandAverage(Rx_all, f_bins, F1, F2, method):
 
-def afk ():
-    return;
+    P = np.zeros(len(theta))
+    count = 0
+
+    for k in range(len(f_bins)):
+        if f_bins[k] >= F1 and f_bins[k] <= F2:
+            p = np.zeros(len(theta))
+            if method == "mbf":
+                p = matchedBeamFormer(p, Rx_all[k], theta, M, d, v, f_bins[k])
+            else:
+                p = MVDR(p, Rx_all[k], theta, M, d, v, f_bins[k])
+            P = P + p
+            count = count + 1
+
+    return P / count
+
+F1 = 300
+F2 = 1600       # below v/(2d) = 1715 Hz, so no spatial aliasing
+
+Pmbf_band = bandAverage(Rx_all, f_bins, F1, F2, "mbf")
+Pmvdr_band = bandAverage(Rx_all, f_bins, F1, F2, "mvdr")
+
+print("band", F1, "-", F2, "Hz -> mbf:", np.rad2deg(theta[np.argmax(Pmbf_band)]),
+      " mvdr:", np.rad2deg(theta[np.argmax(Pmvdr_band)]))
+
+plt.figure(figsize=(14, 4))
+plt.subplot(1, 2, 1)
+plt.plot(np.rad2deg(theta), Pmbf_band)
+plt.title("matched beamformer, band " + str(F1) + "-" + str(F2) + " Hz")
+plt.xlabel("angle [deg]")
+plt.ylabel("spatial spectrum")
+plt.grid()
+
+plt.subplot(1, 2, 2)
+plt.plot(np.rad2deg(theta), Pmvdr_band)
+plt.title("mvdr, band " + str(F1) + "-" + str(F2) + " Hz")
+plt.xlabel("angle [deg]")
+plt.ylabel("spatial spectrum")
+plt.grid()
+plt.tight_layout()
+plt.show()
