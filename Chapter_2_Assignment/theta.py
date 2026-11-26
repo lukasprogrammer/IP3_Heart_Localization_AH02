@@ -9,6 +9,8 @@ import math
 
 
 
+
+
 v = 343; # m/s
 F0 = 500 # Hz
 M = 7 
@@ -17,6 +19,11 @@ Q = 2 # how many sources we have
 lam = v/F0
 delta = 0.5; 
 d = lam * delta; # m
+
+Nw = 44444444 # amount of samples
+k = 1
+Fk =  (k * F0)/Nw
+
 
 def alin(theta, M, d, v, F0):
 
@@ -138,11 +145,7 @@ plt.show()
 
 
 
-from scipy.signal import ShortTimeFFT
-import numpy as np
 
 
-
-
-
-
+def afk ():
+    return;
