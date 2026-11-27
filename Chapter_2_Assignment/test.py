@@ -260,13 +260,36 @@ def generate_source(N):
    return (np.random.randn(N) + 1j*np.random.randn(N))/ np.sqrt(2)
 
 theta0 = np.deg2rad([0,15])
+
  
 def datamodel(M,N,theta0):
+    
     theta0 = np.deg2rad([0,15])
     Q = len(theta0)
     A = alin(theta0, M, d, v, F0)
     S = np.array([generate_source(N) + 1j*np.random.randn(N))])
-   
+
+
+X = datamodel(6, Fs*10)
+U, sigma, Vh = np.linalg(X)
+
+V = Vh.conj().T
+
+rank = np.sum(sigma > 1e-10)
+
+print("Singular values:", sigma)
+print("Rank:", rank)
+
+plt.figure(figsize=(14, 4))
+plt.plot()
+
+plt.stem(np.arange(len(sigma)), sigma)
+plt.xlabel("Singular value index")
+plt.ylabel("Singular value")
+plt.title("Singular values of X")
+plt.grid()
+plt.show()
+
 
     
 
