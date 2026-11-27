@@ -7,6 +7,7 @@ from scipy.fft import fft, rfftfreq, rfft
 from scipy.io import wavfile
 import math
 from scipy.signal import ShortTimeFFT
+from pathlib import Path
 
 
 
@@ -147,19 +148,23 @@ plt.tight_layout()
 plt.show()
 '''
 
+
+
+base = Path(__file__).resolve().parent
+
+folder = base / "recordings" / "2026-11-24_17-43-45_single_source"
+
 files = [
-    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_1.wav",
-    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_2.wav",
-    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_3.wav",
-    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_4.wav",
-    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_5.wav",
-    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_6.wav",
+    folder / f"recording_2026-11-24_17-43-45_channel_{i}.wav"
+    for i in range(1, 7)
 ]
 
 X = []
+
 for f in files:
     Fs, x = wavfile.read(f)
     X.append(x)
+
 X = np.array(X, dtype=float)
 
 def narrowband_Rx(X, Fs, nperseg):
