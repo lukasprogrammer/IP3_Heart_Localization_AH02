@@ -260,3 +260,17 @@ plt.grid()
 plt.tight_layout()
 plt.show()
 
+
+
+Us = U[:, :Q]   
+Un = U[:, Q:] 
+
+pmusic = np.zeros((len(theta)))
+def music(pmusic, Un, Rx, theta, M, d, v, F0):
+
+    for i, angle in enumerate(theta):
+            a = alin(angle, M, d, v, F0)
+            pmusic[i] = np.real(a.conj().T @  Un @ Un.conj().T @ a)
+    
+    return
+
