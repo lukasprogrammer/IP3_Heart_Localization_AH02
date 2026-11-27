@@ -7,7 +7,7 @@ from scipy.fft import fft, rfftfreq, rfft
 from scipy.io import wavfile
 import math
 from scipy.signal import ShortTimeFFT
-
+from pathlib import Path
 
 
 
@@ -147,13 +147,13 @@ plt.tight_layout()
 plt.show()
 '''
 
+base = Path(__file__).resolve().parent
+
+folder = base / "recordings" / "2026-11-24_17-43-45_single_source"
+
 files = [
-    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_1.wav",
-    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_2.wav",
-    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_3.wav",
-    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_4.wav",
-    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_5.wav",
-    r"C:\Users\natch\Desktop\Projects\IP3\IP3_Heart_Localization_AH02\Chapter_2_Assignment\recordings\2026-11-24_17-43-45_single_source\recording_2026-11-24_17-43-45_channel_6.wav",
+    folder / f"recording_2026-11-24_17-43-45_channel_{i}.wav"
+    for i in range(1, 7)
 ]
 
 X = []
@@ -260,13 +260,15 @@ def generate_source(N):
    return (np.random.randn(N) + 1j*np.random.randn(N))/ np.sqrt(2)
 
 theta0 = np.deg2rad([0,15])
- 
+S = generate_source(Nw)
+print(S)
+
 def datamodel(M,N,theta0):
-    theta0 = np.deg2rad([0,15])
+   theta0 = np.deg2rad([0,15])
     Q = len(theta0)
     A = alin(theta0, M, d, v, F0)
-    S = np.array([generate_source(N) + 1j*np.random.randn(N))])
-   
+    return A @ S
+
 
     
 
