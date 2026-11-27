@@ -19,5 +19,11 @@ def narrowband_Rx(X,Fs,nperseg):
   return f_bins, Rx_all
 
 
+def generate_source(N):
+   return (np.random.randn(N) + 1j*np.random.randn(N))/ np.sqrt(2)
+
+def datamodel(M,N,theta0)
+    theta
+    Q = len(
 
 
